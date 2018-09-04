@@ -51,6 +51,15 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ * Flink为基于Netty的通信框架定义了自己的通信消息格式，以及相应的解编码器。
+ * NettyMessage由固定大小的消息头和自定义的消息体组成：
+ *
+ * NettyMessage消息头所占的空间是固定的9个字节。
+ *    1、其中，Frame占用一个整型值的空间其存储的值为整个消息（消息头和自定义的消息体）的大小。
+ *    2、Magic Number同样占用一个整形数值的空间且值是固定不变的；
+ *    3、而Id表示消息的类型，占用一个字节空间。
+ *
+ *
  * A simple and generic interface to serialize messages to Netty's buffer space.
  *
  * <p>This class must be public as long as we are using a Netty version prior to 4.0.45. Please check FLINK-7845 for

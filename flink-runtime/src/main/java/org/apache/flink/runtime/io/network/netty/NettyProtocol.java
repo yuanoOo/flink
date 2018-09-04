@@ -25,6 +25,12 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionProvider;
 import org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandler;
 
 /**
+ * NettyProtocol定义了基于Netty进行网络通信时客户端和服务端对事件的处理逻辑与顺序。
+ * 由于Netty中所有事件处理逻辑的代码都处于扩展自ChannelHandler接口的类中，
+ * 所以，NettyProtocol约定了所有的协议实现者，必须提供服务端和客户端处理逻辑的ChannelHandler数组。
+ *
+ * 最终这些ChannelHandler将依据它们在数组中的顺序进行链接以形成ChannelPipeline。
+ *
  * Defines the server and client channel handlers, i.e. the protocol, used by netty.
  */
 public class NettyProtocol {

@@ -50,6 +50,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * 客户端协议栈中的核心的处理器PartitionRequestClientHandler，该处理器用于处理服务端的响应消息。
+ *
  * Channel handler to read the messages of buffer response or error response from the
  * producer.
  *
@@ -178,6 +180,7 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		try {
+			// 当没有待解析的原始消息时，直接解码消息，否则将消息加入到stagedMessages队列中，等待排队处理
 			if (!bufferListener.hasStagedBufferOrEvent() && stagedMessages.isEmpty()) {
 				decodeMsg(msg, false);
 			}

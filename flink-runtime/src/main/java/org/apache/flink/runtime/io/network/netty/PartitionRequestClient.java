@@ -42,6 +42,20 @@ import static org.apache.flink.runtime.io.network.netty.NettyMessage.TaskEventRe
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ * 分区请求客户端（PartitionRequestClient）用于发起远程PartitionRequest请求，
+ * 它也是RemoteChannel跟Netty通信层之间进行衔接的对象。
+ *
+ * <p>
+ *     对单一的TaskManager而言只存在一个NettyClient实例。
+ *     但处于同一TaskManager中不同的任务实例可能会跟不同的远程TaskManager上的任务之间交换数据，
+ *     不同的TaskManager实例会有不同的ConnectionID（用于标识不同的IP地址）。
+ *
+ *
+ *     因此，Flink采用PartitionRequestClient来对应ConnectionID，并提供了
+ *     分区请求客户端工厂（PartitionRequestClientFactory）来创建
+ *     PartitionRequestClient并保存ConnectionID与之的对应关系。
+ * </p>
+ *
  * Partition request client for remote partition requests.
  *
  * <p>This client is shared by all remote input channels, which request a partition
@@ -105,11 +119,14 @@ public class PartitionRequestClient {
 		LOG.debug("Requesting subpartition {} of partition {} with {} ms delay.",
 				subpartitionIndex, partitionId, delayMs);
 
+		// 将当前请求数据的RemoteInputChannel的实例注入到NettyClient的ChannelHandler管道的
 		clientHandler.addInputChannel(inputChannel);
 
+		// 构建PartitionRequest请求对象
 		final PartitionRequest request = new PartitionRequest(
 				partitionId, subpartitionIndex, inputChannel.getInputChannelId(), inputChannel.getInitialCredit());
 
+		//构建一个ChannelFutureListener的实例，当I/O操作执行失败后，会触发相关的错误处理逻辑
 		final ChannelFutureListener listener = new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
@@ -125,11 +142,12 @@ public class PartitionRequestClient {
 			}
 		};
 
+		//立即发送该请求，并注册listener
 		if (delayMs == 0) {
 			ChannelFuture f = tcpChannel.writeAndFlush(request);
 			f.addListener(listener);
 			return f;
-		} else {
+		} else { //如果请求需要延迟一定的时间，则延迟发送请求
 			final ChannelFuture[] f = new ChannelFuture[1];
 			tcpChannel.eventLoop().schedule(new Runnable() {
 				@Override

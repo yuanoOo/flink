@@ -187,6 +187,7 @@ class NettyClient {
 
 					channel.pipeline().addLast("ssl", new SslHandler(sslEngine));
 				}
+				// NettyProtocol中定义的netty协议栈，最终会被注册到netty引导对象Bootstrap中
 				channel.pipeline().addLast(protocol.getClientChannelHandlers());
 			}
 		});
