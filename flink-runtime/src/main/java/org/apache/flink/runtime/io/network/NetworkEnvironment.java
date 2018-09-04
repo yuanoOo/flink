@@ -58,6 +58,11 @@ public class NetworkEnvironment {
 
 	private final NetworkBufferPool networkBufferPool;
 
+	/**
+	 * Netty连接管理器（NettyConnectionManager）是连接管理器接口（ConnectionManager）针对
+	 * 基于Netty的远程连接管理的实现者。它是TaskManager中负责网络通信的网络环境对象（NetworkEnvironment）
+	 * 的核心部件之一。
+	 */
 	private final ConnectionManager connectionManager;
 
 	private final ResultPartitionManager resultPartitionManager;
