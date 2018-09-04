@@ -34,6 +34,12 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 /**
  * Extends around Netty's {@link PooledByteBufAllocator} with strict control
  * over the number of created arenas.
+ *
+ * NettyBufferPool在构造器内部以固定的参数实例化PooledByteBufAllocator并作为自己的内部分配器。
+ * 具体做了哪些限制呢？
+ *    1、首先，PooledByteBufAllocator本身既支持堆内存分配也支持堆外内存分配，NettyBufferPool
+ *       将其限定为只在堆外内存上进行分配。
+ *    2、其次， 显式指定了pageSize大小为8192，maxOrder值为11。
  */
 public class NettyBufferPool extends PooledByteBufAllocator {
 
