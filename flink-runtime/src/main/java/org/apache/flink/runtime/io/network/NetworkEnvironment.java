@@ -47,6 +47,28 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ *
+ * 网络环境（NetworkEnvironment）是TaskManager进行网络通信的主对象，主要用于跟踪中间结果并负责所有的数据交换。
+ * 每个TaskManager的实例都包含一个网络环境对象，在TaskManager启动时创建。
+ * NetworkEnvironment管理着多个协助通信的关键部件，它们是：
+ *
+ *    NetworkBufferPool：网络缓冲池，负责申请一个TaskManager的所有的内存段用作缓冲池；
+ *    ConnectionManager：连接管理器，用于管理本地（远程）通信连接；
+ *    ResultPartitionManager：结果分区管理器，用于跟踪一个TaskManager上所有生产/消费相关的ResultPartition；
+ *    TaskEventDispatcher：任务事件分发器，从消费者任务分发事件给生产者任务；
+ *    ResultPartitionConsumableNotifier：结果分区可消费通知器，用于通知消费者生产者生产的结果分区可消费；
+ *    PartitionStateChecker：分区状态检查器，用于检查分区状态；
+ *
+ * NetworkEnvironment被初始化时，它首先根据配置创建网络缓冲池（NetworkBufferPool）。
+ *  创建NetworkBufferPool时需要指定Buffer数目、单个Buffer的大小以及Buffer所基于的内存类型，
+ *  这些信息都是可配置的并封装在配置对象NetworkEnvironmentConfiguration中。
+ *
+ * NetworkEnvironment对象包含了上面列举的网络I/O相关的各种部件，这些对象并不随着NetworkEnvironment对象实例化而被立即实例化，
+ * 它们的实例化会被延后到NetworkEnvironment对象跟TaskManager以及JobManager**关联**（associate）上之后。
+ * TaskManager在启动后会向JobManager注册，随后NetworkEnvironment的associateWithTaskManagerAndJobManager方法会得到调用，
+ * 在其中所有的辅助部件都会得到实例化：
+ *
+ *
  * Network I/O components of each {@link TaskManager} instance. The network environment contains
  * the data structures that keep track of all intermediate results and all data exchanges.
  */
@@ -186,7 +208,19 @@ public class NetworkEnvironment {
 	//  Task operations
 	// --------------------------------------------------------------------------------------------
 
+	/**
+	 * 在任务执行的核心逻辑中，有一个步骤是需要将自身（Task）注册到网络栈（也就是这里的NetworkEnvironment）。
+	 * 该步骤会调用NetworkEnvironment的实例方法registerTask进行注册，注册之后NetworkEnvironment会对任务的通信进行管理：
+	 *
+	 *
+	 * NetworkEnvironment对象会为当前任务生产端的每个ResultPartition都创建本地缓冲池，缓冲池中的Buffer数为结果分区的子分区数，
+	 * 同时为当前任务消费端的InputGate创建本地缓冲池，缓冲池的Buffer数为InputGate所包含的输入信道数。这些缓冲池都是非固定大小的，
+	 * 也就是说他们会按照网络缓冲池内存段的使用情况进行重平衡。
+	 * @param task
+	 * @throws IOException
+	 */
 	public void registerTask(Task task) throws IOException {
+		// 获得当前任务对象所生产的结果分区集合
 		final ResultPartition[] producedPartitions = task.getProducedPartitions();
 
 		synchronized (lock) {
@@ -194,6 +228,7 @@ public class NetworkEnvironment {
 				throw new IllegalStateException("NetworkEnvironment is shut down");
 			}
 
+			// 遍历任务的每个结果分区，依次进行初始化
 			for (final ResultPartition partition : producedPartitions) {
 				setupPartition(partition);
 			}
@@ -214,10 +249,15 @@ public class NetworkEnvironment {
 			int maxNumberOfMemorySegments = partition.getPartitionType().isBounded() ?
 				partition.getNumberOfSubpartitions() * networkBuffersPerChannel +
 					extraNetworkBuffersPerGate : Integer.MAX_VALUE;
+
+			// 用网络缓冲池创建本地缓冲池，该缓冲池是非固定大小的且请求的缓冲个数是结果分区的子分区个数
 			bufferPool = networkBufferPool.createBufferPool(partition.getNumberOfSubpartitions(),
 				maxNumberOfMemorySegments);
+
+			// 将本地缓冲池注册到结果分区
 			partition.registerBufferPool(bufferPool);
 
+			// 结果分区会被注册到结果分区管理器
 			resultPartitionManager.registerResultPartition(partition);
 		} catch (Throwable t) {
 			if (bufferPool != null) {
@@ -231,6 +271,7 @@ public class NetworkEnvironment {
 			}
 		}
 
+		// 向任务事件分发器注册结果分区写入器
 		taskEventDispatcher.registerPartition(partition.getPartitionId());
 	}
 
@@ -302,6 +343,7 @@ public class NetworkEnvironment {
 		}
 	}
 
+	// 由TaskManagerServices进行启动
 	public void start() throws IOException {
 		synchronized (lock) {
 			Preconditions.checkState(!isShutdown, "The NetworkEnvironment has already been shut down.");

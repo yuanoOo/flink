@@ -39,6 +39,21 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * MemoryManager 作为Flink的内存管理器，承担着MemorySegment的分配、回收等职责
+ *
+ * 首先，这里为了提升memory segment操作效率，MemoryManager鼓励长度相等的memory segment。
+ * 由此引入了page的概念。其实page跟memory segment没有本质上的区别，只不过是为了体现memory segment
+ * 被分配为均等大小的内存空间而引入的。可以将这个类比于操作系统的页式内存分配，page这里看着同等大小的block即可。
+ *
+ * MemoryManager提供的默认page size为32KB，并提供了自定义page size的下界值不得小于4KB。
+ * DEFAULT_PAGE_SIZE                                MIN_PAGE_SIZE
+ *
+ * 将segment page化会给后面的跨多个segment的访问带来更高的效率。
+ *
+ * ===========> 1、构建segment对象池（pool化），增强复用性，减少重复分配，回收的开销
+ * ===========> 2、规范segment的大小（page化），提升操作效率
+ * ===========> 3、抽象跨segment的访问复杂性（view化）
+ *
  * The memory manager governs the memory that Flink uses for sorting, hashing, and caching. Memory
  * is represented in segments of equal size. Operators allocate the memory by requesting a number
  * of memory segments.
@@ -65,6 +80,10 @@ public class MemoryManager {
 
 	// ------------------------------------------------------------------------
 
+	/**
+	 * MemoryManager这个类本身没有特别的地方，并可能会被跨线程共享。
+	 * 这时某些操作可能会牵扯到多线程的并发问题。因此，MemoryManager提供了一个对象作为锁，以在某些方法上进行同步操作。
+	 */
 	/** The lock used on the shared structures. */
 	private final Object lock = new Object();
 
@@ -162,6 +181,7 @@ public class MemoryManager {
 		this.numNonAllocatedPages = preAllocateMemory ? 0 : this.totalNumPages;
 		final int memToAllocate = preAllocateMemory ? this.totalNumPages : 0;
 
+		// 根据memory type初始化memory pool对象：
 		switch (memoryType) {
 			case HEAP:
 				this.memoryPool = new HybridHeapMemoryPool(memToAllocate, pageSize);
@@ -183,6 +203,8 @@ public class MemoryManager {
 	// ------------------------------------------------------------------------
 
 	/**
+	 * 释放内存，清空内存池
+	 *
 	 * Shuts the memory manager down, trying to release all the memory it managed. Depending
 	 * on implementation details, the memory does not necessarily become reclaimable by the
 	 * garbage collector, because there might still be references to allocated segments in the
@@ -585,6 +607,14 @@ public class MemoryManager {
 	//  Memory Pools
 	// ------------------------------------------------------------------------
 
+	/**
+	 * 关于pool对象，没有太多特别的，主要是三个接口方法：
+	 *
+	 *  allocateNewSegment : 直接申请一个新的segment，该segment不属于pool
+	 *  requestSegmentFromPool : 从池里请求一个segment，调用ArrayDeque的remove（首元素出队）方法，获得一个内存块引用，并包装成segment
+	 *  returnSegementToPool : 调用ArrayDeque的add(入队到尾部)方法，添加内存块引用并调用MemorySegment的free方法释放该segement
+	 *
+	 */
 	abstract static class MemoryPool {
 
 		abstract int getNumberOfAvailableMemorySegments();

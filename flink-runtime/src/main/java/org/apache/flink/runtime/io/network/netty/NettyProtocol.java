@@ -41,6 +41,7 @@ public class NettyProtocol {
 	private final ResultPartitionProvider partitionProvider;
 	private final TaskEventDispatcher taskEventDispatcher;
 
+	// Streaming中的背压
 	private final boolean creditBasedEnabled;
 
 	NettyProtocol(ResultPartitionProvider partitionProvider, TaskEventDispatcher taskEventDispatcher, boolean creditBasedEnabled) {

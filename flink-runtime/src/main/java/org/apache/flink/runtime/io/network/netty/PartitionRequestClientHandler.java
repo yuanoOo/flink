@@ -177,6 +177,15 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 		}
 	}
 
+	/**
+	 * 这里涉及到两个对象，
+	 *    1、首先是bufferListener，用于感知可用Buffer的事件侦听器，它是内部实现的BufferListenerTask类型。
+	 *    2、其次是stagedMessages，用于接收原始未解码消息的队列。
+	 *
+	 * @param ctx
+	 * @param msg
+	 * @throws Exception
+	 */
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		try {
@@ -238,6 +247,19 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 		super.channelReadComplete(ctx);
 	}
 
+
+	/**
+	 * 解码方法decodeMsg的主要逻辑包含对两种类型消息的解析。
+	 *    1、一种是服务端的错误响应消息ErrorResponse，另一种是正常的Buffer请求响应消息BufferResponse。
+	 *    2、对于错误响应消息会判断是否是致命错误，如果是致命错误，则直接通知所有的InputChannel并关闭它们；
+	 *    3、如果不是，则让该消息对应的InputChannel按不同情况处理。我们重点关注对BufferResponse的处理：
+	 *
+	 *
+	 * @param msg
+	 * @param isStagedBuffer
+	 * @return
+	 * @throws Throwable
+	 */
 	private boolean decodeMsg(Object msg, boolean isStagedBuffer) throws Throwable {
 		final Class<?> msgClazz = msg.getClass();
 
@@ -245,7 +267,10 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 		if (msgClazz == NettyMessage.BufferResponse.class) {
 			NettyMessage.BufferResponse bufferOrEvent = (NettyMessage.BufferResponse) msg;
 
+			// 根据响应消息里的receiverId，从注册map里获取到接收该消息的RemoteInputChannel实例
 			RemoteInputChannel inputChannel = inputChannels.get(bufferOrEvent.receiverId);
+
+			// 如果该响应没有对应的接收者，则释放该Buffer，同时通知服务端取消该请求
 			if (inputChannel == null) {
 				bufferOrEvent.releaseBuffer();
 
@@ -254,6 +279,7 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 				return true;
 			}
 
+			// 接下来才进入到真正的解析逻辑
 			return decodeBufferOrEvent(inputChannel, bufferOrEvent, isStagedBuffer);
 		}
 		// ---- Error ---------------------------------------------------------
@@ -295,6 +321,8 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 		try {
 			ByteBuf nettyBuffer = bufferOrEvent.getNettyBuffer();
 			final int receivedSize = nettyBuffer.readableBytes();
+
+			// 空Buffer
 			if (bufferOrEvent.isBuffer()) {
 				// ---- Buffer ------------------------------------------------
 
@@ -307,6 +335,7 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 
 				BufferProvider bufferProvider = inputChannel.getBufferProvider();
 
+				// 获得Buffer提供者，如果为空，则通知服务端取消请求
 				if (bufferProvider == null) {
 					// receiver has been cancelled/failed
 					cancelRequestFor(bufferOrEvent.receiverId);
@@ -316,6 +345,8 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 				while (true) {
 					Buffer buffer = bufferProvider.requestBuffer();
 
+					// 如果请求到Buffer，则读取数据同时触发InputChannel的onBuffer回调
+					// 该方法在前文分析输入通道时我们早已提及过，它会将Buffer加入到队列中
 					if (buffer != null) {
 						nettyBuffer.readBytes(buffer.asByteBuf(), receivedSize);
 
@@ -323,6 +354,17 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 
 						return true;
 					}
+
+					// 否则进入等待模式，当有Buffer可用时，会触发bufferListener的onEvent方法
+					/**
+					 * 如果从Buffer提供者没有获取到Buffer，说明当前没有可用的Buffer资源了，那么将进入等待模式。
+					 * 这里等待Buffer可用是基于事件侦听机制，这个机制是如何实现的呢？在上面的waitForBuffer方法的实现中，
+					 * 通过将当前的BufferListenerTask的bufferListener实例反向注册到Buffer提供者，
+					 * 当Buffer提供者中有Buffer可用时，将会触发bufferListener的onEvent回调方法。
+					 *
+					 * 这里需要注意的是，当Buffer提供者中的Buffer从无到有，说明有Buffer被回收了，
+					 * 所以onEvent方法是被回收Buffer的线程所调用，而非Netty的I/O线程。
+					 */
 					else if (bufferListener.waitForBuffer(bufferProvider, bufferOrEvent)) {
 						releaseNettyBuffer = false;
 
