@@ -25,6 +25,10 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 /**
+ * A Row可以有任意数量的字段并包含一组字段，这些字段可能都是不同的类型。
+ *
+ * 可以通过getField(int)， setField(int, Object)访问设置其中的字段
+ *
  * A Row can have arbitrary number of fields and contain a set of fields, which may all be
  * different types. The fields in Row can be null. Due to Row is not strongly typed, Flink's
  * type extraction mechanism can't extract correct field types. So that users should manually

@@ -35,6 +35,19 @@ import java.nio.ByteOrder;
 
 
 /**
+ * The Record代表一个具有多个值的数据记录。
+ *
+ * The Record是任意值的元组。它实现了一个稀疏元组模型，这意味着该记录可以包含许多字段，这些字段实际上是null并且未在记录中表示。
+ * 它内部有一个位图，用于标记哪些字段已设置，哪些不是。
+ *
+ * 为了有效地进行数据交换，从任何源读取的记录以序列化二进制形式保存其数据。
+ * 字段在首次访问时被延迟反序列化。字段的修改会被先缓存起来，并在下一次序列化或对
+ * {@link #updateBinaryRepresenation（）}方法的任何显式调用时将修改合并到二进制表示中。
+ *
+ * 重要说明：Records必须用作可变对象，并且可以跨用户函数调用重复使用以提高性能。该记录是一个重量级的对象，
+ * 旨在最大限度地减少对单个字段序列化和反序列化方法的调用。由于有几个指针和数组，它保持的一些状态消耗
+ * 相当多的内存（在64位JVM中占用200字节的内存）。
+ *
  * The Record represents a multi-valued data record.
  * The record is a tuple of arbitrary values. It implements a sparse tuple model, meaning that the record can contain
  * many fields which are actually null and not represented in the record. It has internally a bitmap marking which fields
