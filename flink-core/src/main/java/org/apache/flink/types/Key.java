@@ -21,6 +21,9 @@ package org.apache.flink.types;
 import org.apache.flink.annotation.PublicEvolving;
 
 /**
+ * Key用来使得一个类型可以作为键以建立跟值之间的关系。并且键Key要求是可被比较的，因为它实现了Comparable接口。
+ * 目前Key接口被标记为“Deprecated”的，在未来的版本中可能会被废弃。
+ *
  * This interface has to be implemented by all data types that act as key. Keys are used to establish
  * relationships between values. A key must always be {@link java.lang.Comparable} to other keys of
  * the same type. In addition, keys must implement a correct {@link java.lang.Object#hashCode()} method

@@ -25,6 +25,9 @@ import org.apache.flink.annotation.Public;
 import org.apache.flink.core.io.IOReadableWritable;
 
 /**
+ * Value位于所有类型的继承链的最顶端，可以说是所有类型的根。它代指所有可被序列化为Flink二进制表示的类型。
+ * 该接口本身并不提供任何接口方法，但它继承自两个接口。
+ *
  * Basic value interface for types that act as serializable values.
  * <p>
  * This interface extends {@link IOReadableWritable} and requires to implement

@@ -25,6 +25,8 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
 /**
+ * 该接口提供一些拷贝方法以方便基本类型的拷贝。
+ *
  * Interface to be implemented by basic types that support to be copied efficiently.
  */
 @Public
@@ -40,12 +42,17 @@ public interface CopyableValue<T> extends Value {
 	/**
 	 * Performs a deep copy of this object into the {@code target} instance.
 	 *
+	 * 深拷贝
+	 *
 	 * @param target Object to copy into.
 	 */
 	void copyTo(T target);
 
 	/**
 	 * Performs a deep copy of this object into a new instance.
+	 *
+	 * 这种方法对于通用用户定义函数在存储多个对象时克隆{@link CopyableValue}非常有用。
+	 * 对于对象重用，必须创建一个深度复制，并防止类型擦除调用new。
 	 *
 	 * This method is useful for generic user-defined functions to clone a
 	 * {@link CopyableValue} when storing multiple objects. With object reuse
@@ -56,6 +63,10 @@ public interface CopyableValue<T> extends Value {
 	T copy();
 
 	/**
+	 *
+	 * 提供在Flink的二进制表示层面上的拷贝（等价于对IOReadableWritable的read以及write的先后调用，
+	 * 但这里copy方法的优势是，中间不需要进行反序列化的过程）。
+	 *
 	 * Copies the next serialized instance from {@code source} to {@code target}.
 	 *
 	 * This method is equivalent to calling {@code IOReadableWritable.read(DataInputView)}

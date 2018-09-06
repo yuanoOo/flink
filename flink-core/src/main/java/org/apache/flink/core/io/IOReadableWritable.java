@@ -25,6 +25,12 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
 /**
+ *
+ * Flink核心IO包种的接口，实现该接口用于将类的实例序列化为二进制的表示形式
+ *
+ * IOReadableWritable提供了读写数据的write/read方法，另外IOReadableWritable
+ * 对接口的实现者的一个要求是其必须有一个默认的（无参）构造器。
+ *
  * This interface must be implemented by every class whose objects have to be serialized to their binary representation
  * and vice-versa. In particular, records have to implement this interface in order to specify how their data can be
  * transferred to a binary representation.
