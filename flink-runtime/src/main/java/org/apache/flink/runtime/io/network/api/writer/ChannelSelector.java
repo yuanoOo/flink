@@ -21,6 +21,12 @@ package org.apache.flink.runtime.io.network.api.writer;
 import org.apache.flink.core.io.IOReadableWritable;
 
 /**
+ *
+ * 所谓的通道选择器允许用户自定义某个记录的要存放在哪个输出通道中，如果不指定，
+ * 那么Flink将会选择简单的顺序轮转选择器（RoundRobinChannelSelector）。
+ *
+ * 所谓的通道其实就是ResultSubpartition
+ *
  * The {@link ChannelSelector} determines to which logical channels a record
  * should be written to.
  *

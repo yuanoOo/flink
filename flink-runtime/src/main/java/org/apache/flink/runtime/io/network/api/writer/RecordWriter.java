@@ -38,6 +38,15 @@ import static org.apache.flink.runtime.io.network.api.serialization.RecordSerial
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
+ *
+ * 在通信层API提供了两种写入器，分别是记录写入器（RecordWriter）以及结果分区写入器（ResultPartitionWriter）。
+ * 这两个写入器的主要差别是它们所面向的层级不同。RecordWriter面向记录，而ResultPartitionWriter面向的是Buffer
+ *
+ * RecordWriter相比ResultPartitionWriter所处的层面更高，并且它依赖于ResultPartitionWriter，
+ * 所以我们先分析ResultPartitionWriter。一个ResultPartitionWriter通常负责为一个ResultPartition
+ * 特定子分区生产Buffer和Event。同时还提供了将特定的事件广播到所有的子分区中的方法。
+ *
+ *
  * A record-oriented runtime result writer.
  *
  * <p>The RecordWriter wraps the runtime's {@link ResultPartitionWriter} and takes care of
@@ -80,6 +89,17 @@ public class RecordWriter<T extends IOReadableWritable> {
 		this(writer, channelSelector, false);
 	}
 
+	/**
+	 * 在RecordWriter被初始化时，它所对应的ResultPartition的每个ResultSubpartition（输出信道）
+	 * 都会有对应一个独立的RecordSerializer，具体的类型是我们之前分析的SpanningRecordSerializer。
+	 *
+	 * RecordWriter会接收要写入的记录然后借助于ResultPartitionWriter将序列化后的
+	 * Buffer写入特定的ResultSubpartition中去。它提供了单播、广播的写入方式，支持记录、事件的写入。
+	 *
+	 * @param writer
+	 * @param channelSelector
+	 * @param flushAlways
+	 */
 	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector, boolean flushAlways) {
 		this.flushAlways = flushAlways;
 		this.targetPartition = writer;
@@ -100,7 +120,17 @@ public class RecordWriter<T extends IOReadableWritable> {
 		}
 	}
 
+	/**
+	 * 从上述代码段中我们可以看到，如果记录的数据无法被单个Buffer所容纳，将会被拆分成多个Buffer存储，
+	 * 直到数据写完。而如果是广播记录或者广播事件，整个过程也是类似的，只不过变成了挨个遍历写入每个
+	 * ResultSubpartition，而不是像上面这样通过通道选择器来选择。
+	 *
+	 * @param record
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
 	public void emit(T record) throws IOException, InterruptedException {
+		// 遍历通道选择器选择出的通道（有可能选择多个通道），所谓的通道其实就是ResultSubpartition
 		for (int targetChannel : channelSelector.selectChannels(record, numChannels)) {
 			sendToTarget(record, targetChannel);
 		}
@@ -124,11 +154,16 @@ public class RecordWriter<T extends IOReadableWritable> {
 	}
 
 	private void sendToTarget(T record, int targetChannel) throws IOException, InterruptedException {
+		// 获得当前通道对应的序列化器
 		RecordSerializer<T> serializer = serializers[targetChannel];
 
+		// 向序列化器中加入记录，加入的记录会被序列化并存入到序列化器内部的Buffer中
 		SerializationResult result = serializer.addRecord(record);
 
+		// 如果序列化器中的Buffer已经存满
 		while (result.isFullBuffer()) {
+
+			// Marks the current {@link BufferBuilder} as finished and clears the state for next one.
 			if (tryFinishCurrentBufferBuilder(targetChannel, serializer)) {
 				// If this was a full record, we are done. Not breaking
 				// out of the loop at this point will lead to another
@@ -141,6 +176,7 @@ public class RecordWriter<T extends IOReadableWritable> {
 			}
 			BufferBuilder bufferBuilder = requestNewBufferBuilder(targetChannel);
 
+			// 将新Buffer继续用来序列化记录的剩余数据，然后再次循环这段逻辑，直到数据全部被写入Buffer
 			result = serializer.continueWritingWithNextBufferBuilder(bufferBuilder);
 		}
 		checkState(!serializer.hasSerializedData(), "All data should be written at once");

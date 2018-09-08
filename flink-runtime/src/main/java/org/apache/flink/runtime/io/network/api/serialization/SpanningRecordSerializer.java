@@ -30,6 +30,18 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
+ *
+ * RecordSerializer，作为一个接口，SpanningRecordSerializer是其唯一的实现。
+ * 它是一种支持跨内存段的序列化器，其实现借助于中间缓冲区来缓存序列化后的数据，然后再往真正的目标Buffer里写，
+ * 在写的时候会维护两个“指针”：一个是表示目标Buffer内存段长度的limit，还有一个是表示其当前写入位置的position。
+ *
+ * 因为一个Buffer对应着一个内存段，当将数据序列化并存入内存段时，其空间有可能有剩余也有可能不够。
+ * 因此，RecordSerializer定义了一个表示序列化结果的SerializationResult枚举。它提供了这么几个枚举值：
+ *
+ * 	    1、PARTIAL_RECORD_MEMORY_SEGMENT_FULL：内存段已满但记录的数据只写入了部分，没有完全写完；
+ *	    2、FULL_RECORD_MEMORY_SEGMENT_FULL：内存段写满，记录的数据已全部写入；
+ *     3、FULL_RECORD：记录的数据全部写入，但内存段并没有满；
+ *
  * Record serializer which serializes the complete record to an intermediate
  * data serialization buffer and copies this buffer to target buffers
  * one-by-one using {@link #continueWritingWithNextBufferBuilder(BufferBuilder)}.

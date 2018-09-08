@@ -24,6 +24,10 @@ import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import java.io.IOException;
 
 /**
+ *
+ * 为了使得记录以及事件能够被写入Buffer随后在消费时再从Buffer中读出，
+ * Flink提供了记录序列化器（RecordSerializer）与反序列化器（RecordDeserializer）以及事件序列化器（EventSerializer）。
+ *
  * Interface for turning records into sequences of memory segments.
  */
 public interface RecordSerializer<T extends IOReadableWritable> {
@@ -66,6 +70,8 @@ public interface RecordSerializer<T extends IOReadableWritable> {
 	}
 
 	/**
+	 * 向序列化器中加入记录，加入的记录会被序列化并存入到序列化器内部的Buffer中
+	 *
 	 * Starts serializing and copying the given record to the target buffer
 	 * (if available).
 	 *
