@@ -25,6 +25,8 @@ import java.io.IOException;
 
 /**
  * A blob store.
+ *
+ * BlobStore 是 BlobServer 的组件之一，BolbStore 主要负责 BlobServer 本地存储的恢复【JobManager 重启】
  */
 public interface BlobStore extends BlobView {
 

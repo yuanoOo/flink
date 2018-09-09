@@ -38,6 +38,8 @@ import java.nio.file.Files;
 import java.util.Collection;
 
 /**
+ * TaskDeploymentDescriptor包含在任务管理器上部署任务所需的所有信息。
+ *
  * A task deployment descriptor contains all the information necessary to deploy a task on a task manager.
  */
 public final class TaskDeploymentDescriptor implements Serializable {

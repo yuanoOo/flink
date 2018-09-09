@@ -63,6 +63,10 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ * flink 用来管理二进制大文件的服务，flink JobManager 中启动的 BLOB Server 负责监听请求并派发线程去处理。
+ * 更进一步，它将负责创建对应的目录结构去存储这些 BLOBs 或者只是临时性地缓存。背后支持的文件系统：本地磁盘
+ *
+ *
  * This class implements the BLOB server. The BLOB server is responsible for listening for incoming requests and
  * spawning threads to handle these requests. Furthermore, it takes care of creating the directory structure to store
  * the BLOBs or temporarily cache them.
