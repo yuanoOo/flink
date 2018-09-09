@@ -103,6 +103,12 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
+ *
+ * Task 是直接受 TaskManager 管理和调度的，而Task又会调用 StreamTask，StreamTask中封装了算子的处理逻辑
+ *
+ * Task 代表一个 TaskManager 中所起的并行子任务，执行封装的flink算子并运行，
+ * 提供以下服务：消费输入data、生产 IntermediateResultPartition [ flink关于中间结果的抽象 ]、与 JobManager 交互
+ *
  * The Task represents one execution of a parallel subtask on a TaskManager.
  * A Task wraps a Flink operator (which may be a user function) and
  * runs it, providing all services necessary for example to consume input data,
@@ -513,6 +519,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	}
 
 	/**
+	 * 核心的运行方法 run()
 	 * The core work method that bootstraps the task and executes its code.
 	 */
 	@Override

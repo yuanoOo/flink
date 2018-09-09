@@ -73,6 +73,17 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * 所有streaming tasks的基类。task是TaskManagers部署和执行的本地处理单元。
+ * 每个任务运行一个或多个{@link StreamOperator}，它们构成Task的operator chain。
+ *
+ * chain在一起的Operators在同一个线程中同步执行，并且因此在同一个流分区上。
+ * 这些链的常见情况是连续的map/flatmap/filter Task
+ *
+ * 任务链包含一个“head”operator和多个chained operators。
+ *
+ * StreamTask是专门类型的head operator:一个输入和两个输入任务,以及sources,迭代正面和迭代反面
+ *
+ *
  * Base class for all streaming tasks. A task is the unit of local processing that is deployed
  * and executed by the TaskManagers. Each task runs one or more {@link StreamOperator}s which form
  * the Task's operator chain. Operators that are chained together execute synchronously in the

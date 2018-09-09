@@ -28,13 +28,19 @@ import org.apache.flink.runtime.execution.Environment;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ *
+ * 这是TaskManager可以执行的每个任务的抽象基类。具体任务扩展此类，例如流和批处理任务。
  * This is the abstract base class for every task that can be executed by a TaskManager.
  * Concrete tasks extend this class, for example the streaming and batch tasks.
  *
+ * TaskManager在执行任务时调用{@link #invoke（）}方法。
+ * 任务的所有操作都在此方法中进行（设置输入输出流读取器和写入器以及任务的核心操作）。
  * <p>The TaskManager invokes the {@link #invoke()} method when executing a
  * task. All operations of the task happen in this method (setting up input
  * output stream readers and writers as well as the task's core operation).
  *
+ * 所有继承类都必须提供构造函数{@code MyTask（Environment，TaskStateSnapshot）}。
+ * 为方便起见，总是无状态的任务只需要实现构造函数{@code MyTask（Environment）}。
  * <p>All classes that extend must offer a constructor {@code MyTask(Environment, TaskStateSnapshot)}.
  * Tasks that are always stateless can, for convenience, also only implement the constructor
  * {@code MyTask(Environment)}.
