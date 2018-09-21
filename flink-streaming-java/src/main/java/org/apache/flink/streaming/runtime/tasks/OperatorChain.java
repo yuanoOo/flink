@@ -67,6 +67,8 @@ import java.util.Random;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ * {@code OperatorChain}包含在单个{@link StreamTask}中作为一个链执行的所有运算符。
+ *
  * The {@code OperatorChain} contains all operators that are executed as one chain within a single
  * {@link StreamTask}.
  *
@@ -106,6 +108,10 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		// we read the chained configs, and the order of record writer registrations by output name
 		Map<Integer, StreamConfig> chainedConfigs = configuration.getTransitiveChainedTaskConfigsWithSelf(userCodeClassloader);
 
+		/**
+		 * 创建output stream writers
+		 * 我们遍历此作业顶点的所有外边缘并创建流输出
+		 */
 		// create the final output stream writers
 		// we iterate through all the out edges from this job vertex and create a stream output
 		List<StreamEdge> outEdgesInOrder = configuration.getOutEdgesInOrder(userCodeClassloader);
@@ -195,6 +201,10 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		}
 	}
 
+	/**
+	 * 广播Checkpoint Barrier
+	 * @throws IOException
+	 */
 	public void broadcastCheckpointBarrier(long id, long timestamp, CheckpointOptions checkpointOptions) throws IOException {
 		CheckpointBarrier barrier = new CheckpointBarrier(id, timestamp, checkpointOptions);
 		for (RecordWriterOutput<?> streamOutput : streamOutputs) {

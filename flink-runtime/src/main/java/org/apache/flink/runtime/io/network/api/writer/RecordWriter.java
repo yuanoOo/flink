@@ -187,6 +187,7 @@ public class RecordWriter<T extends IOReadableWritable> {
 	}
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {
+		// 创建一个BufferConsumer
 		try (BufferConsumer eventBufferConsumer = EventSerializer.toBufferConsumer(event)) {
 			for (int targetChannel = 0; targetChannel < numChannels; targetChannel++) {
 				RecordSerializer<T> serializer = serializers[targetChannel];

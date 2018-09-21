@@ -496,6 +496,11 @@ class TaskManager(
   }
 
   /**
+   * 在taskmanager actor接受到TriggerCheckpoint的消息后，会执行上面的handleCheckpointMessage方法，
+    * 这个方法里的核心部分就是task.triggerCheckpointBarrier了。
+    * triggerCheckpointBarrier方法实际上是起一个新的线程异步的执行StreamTask里的triggerCheckpoint方法，
+    * 而triggerCheckpoint方法又调用了performCheckpoint方法，这个方法才是最关键的。
+   *
    * Handler for messages related to checkpoints.
    *
    * @param actorMessage The checkpoint message.
@@ -513,6 +518,7 @@ class TaskManager(
 
         val task = runningTasks.get(taskExecutionId)
         if (task != null) {
+          // checkpoint
           task.triggerCheckpointBarrier(checkpointId, timestamp, checkpointOptions)
         } else {
           log.debug(s"TaskManager received a checkpoint request for unknown task $taskExecutionId.")

@@ -32,6 +32,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * 此类将状态句柄封装到在一个任务中执行的所有运算符实例的快照。
+ * 作为运算符链接的结果，任务可以运行多个运算符实例，并且链中的所有运算符实例都可以在其运算符ID下注册其状态。
+ * 每个运算符实例都是一个物理执行，负责处理通过逻辑运算符的数据分区。, 这种划分恰好并行化逻辑运算符的执行，例如 分发地图功能。
+ *
  * This class encapsulates state handles to the snapshots of all operator instances executed within one task. A task
  * can run multiple operator instances as a result of operator chaining, and all operator instances from the chain can
  * register their state under their operator id. Each operator instance is a physical execution responsible for

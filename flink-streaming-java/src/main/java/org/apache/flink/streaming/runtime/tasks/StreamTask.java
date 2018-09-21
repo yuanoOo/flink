@@ -620,6 +620,12 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 		}
 	}
 
+	/**
+	 *  TaskManager管理的每个子任务执行checkpoint方法的入口
+	 *
+	 * @return
+	 * @throws Exception
+	 */
 	private boolean performCheckpoint(
 			CheckpointMetaData checkpointMetaData,
 			CheckpointOptions checkpointOptions,
@@ -629,24 +635,42 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			checkpointMetaData.getCheckpointId(), checkpointOptions.getCheckpointType(), getName());
 
 		synchronized (lock) {
+			/**
+			 * 它首先会判断当前task是不是还在running状态，如果不是，那么它需要通知它下游节点的taskmanager别等barrier了，
+			 * 如果还在running状态，那么它会立即向与当前节点连接的所有出节点广播发送barrier。
+			 */
 			if (isRunning) {
 				// we can do a checkpoint
 
+				/**
+				 * 从障碍和//记录/水印/定时器/回调的角度来看，所有以下步骤都是作为原子步骤发生的。
+				 *
+				 * 我们通常会尽快发出检查点障碍，以免影响下游//检查点对齐
+				 */
 				// All of the following steps happen as an atomic step from the perspective of barriers and
 				// records/watermarks/timers/callbacks.
 				// We generally try to emit the checkpoint barrier as soon as possible to not affect downstream
 				// checkpoint alignments
 
+				/**
+				 * 步骤（1）：准备检查点，允许操作员做一些预barrier工作。在一般情况下，预屏障工作应该是无关紧要的。
+				 */
 				// Step (1): Prepare the checkpoint, allow operators to do some pre-barrier work.
 				//           The pre-barrier work should be nothing or minimal in the common case.
 				operatorChain.prepareSnapshotPreBarrier(checkpointMetaData.getCheckpointId());
 
+				/**
+				 * 步骤（2）：向下游发送检查点屏障
+				 */
 				// Step (2): Send the checkpoint barrier downstream
 				operatorChain.broadcastCheckpointBarrier(
 						checkpointMetaData.getCheckpointId(),
 						checkpointMetaData.getTimestamp(),
 						checkpointOptions);
 
+				/**
+				 * 步骤（3）：拍摄状态快照。这应该在很大程度上是异步的，以免影响流式拓扑的进展
+				 */
 				// Step (3): Take the state snapshot. This should be largely asynchronous, to not
 				//           impact progress of the streaming topology
 				checkpointState(checkpointMetaData, checkpointOptions, checkpointMetrics);
@@ -813,6 +837,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	// ------------------------------------------------------------------------
 
 	/**
+	 * 此runnable执行subTask的所有相关后端快照的异步部分。
+	 *
 	 * This runnable executes the asynchronous parts of all involved backend snapshots for the subtask.
 	 */
 	@VisibleForTesting
@@ -1058,6 +1084,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			this.operatorSnapshotsInProgress = new HashMap<>(allOperators.length);
 		}
 
+		/**
+		 * task执行checkpoint
+		 * @throws Exception
+		 */
 		public void executeCheckpointing() throws Exception {
 			startSyncPartNano = System.nanoTime();
 

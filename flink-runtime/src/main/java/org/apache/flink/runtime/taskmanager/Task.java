@@ -1165,6 +1165,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	// ------------------------------------------------------------------------
 
 	/**
+	 * 调用invokable来触发检查点。
 	 * Calls the invokable to trigger a checkpoint.
 	 *
 	 * @param checkpointID The ID identifying the checkpoint.
@@ -1186,6 +1187,9 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 			final SafetyNetCloseableRegistry safetyNetCloseableRegistry =
 				FileSystemSafetyNet.getSafetyNetCloseableRegistryForThread();
 
+			/**
+			 * 启用一个新的线程进行异步的checkpoint
+			 */
 			Runnable runnable = new Runnable() {
 				@Override
 				public void run() {
@@ -1194,6 +1198,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 					FileSystemSafetyNet.setSafetyNetCloseableRegistryForThread(safetyNetCloseableRegistry);
 
 					try {
+						// invokable: TaskManager可以执行的每个任务的抽象基类。
 						boolean success = invokable.triggerCheckpoint(checkpointMetaData, checkpointOptions);
 						if (!success) {
 							checkpointResponder.declineCheckpoint(
@@ -1216,6 +1221,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 					}
 				}
 			};
+			// 异步调用
 			executeAsyncCallRunnable(runnable, String.format("Checkpoint Trigger for %s (%s).", taskNameWithSubtask, executionId));
 		}
 		else {

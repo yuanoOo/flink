@@ -27,8 +27,10 @@ import java.io.Serializable;
 import java.util.UUID;
 
 /**
+ * 用于抽象与actor的通信的接口。
  * Interface to abstract the communication with an actor.
  *
+ * 避免与ActorRef直接交互。
  * It allows to avoid direct interaction with an ActorRef.
  */
 public interface ActorGateway extends Serializable {
