@@ -56,12 +56,21 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
+ * {@link org.apache.flink.streaming.runtime.tasks.OneInputStreamTask}的输入阅读器。
  * Input reader for {@link org.apache.flink.streaming.runtime.tasks.OneInputStreamTask}.
+ *
+ *
+ * 这内部使用{@link StatusWatermarkValve}来跟踪{@link Watermark}和* {@link StreamStatus}事件，
+ * 并在* {@link StatusWatermarkValve}确定所有{@link Watermark}后将其转发给活动订阅者, 输入已经提前，
+ * 或需要向下游传播{@link StreamStatus}以表示状态更改。
  *
  * <p>This internally uses a {@link StatusWatermarkValve} to keep track of {@link Watermark} and
  * {@link StreamStatus} events, and forwards them to event subscribers once the
  * {@link StatusWatermarkValve} determines the {@link Watermark} from all inputs has advanced, or
  * that a {@link StreamStatus} needs to be propagated downstream to denote a status change.
+ *
+ * 必须通过在给定锁定对象上同步*来保护转发元素，水印或状态状态元素。
+ * 这可以确保我们不会在计时器回调或其他事情上同时调用* {@link OneInputStreamOperator}上的方法。
  *
  * <p>Forwarding elements, watermarks, or status status elements must be protected by synchronizing
  * on the given lock object. This ensures that we don't call methods on a
@@ -154,6 +163,18 @@ public class StreamInputProcessor<IN> {
 		metrics.gauge("checkpointAlignmentTime", barrierHandler::getAlignmentDurationNanos);
 	}
 
+	/**
+	 * 如果消费到的消息是一个 WaterMark，获得其对应的 source channel id 并将时间更新进去，
+	 * 同时记录下当前所有 channel 的最小 WaterMark 时间
+	 *
+	 * 如果当前最小 WaterMark 时间【所有的 channel 都至少消费到该时间】大于上次发射给下游的 WaterMark 时间，
+	 * 则更新 WaterMark 时间并将其交给算子处理
+	 *
+	 * 通常算子在处理【尤其是涉及了窗口计算或者需要时间缓存策略的算子】后会将 WaterMark 继续往下游广播发送
+	 *
+	 * @return
+	 * @throws Exception
+	 */
 	public boolean processInput() throws Exception {
 		if (isFinished) {
 			return false;
