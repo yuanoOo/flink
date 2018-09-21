@@ -381,6 +381,8 @@ public class CheckpointCoordinator {
 	}
 
 	/**
+	 * 触发新的标准检查点，并使用给定的时间戳作为检查点时间戳。
+	 *
 	 * Triggers a new standard checkpoint and uses the given timestamp as the checkpoint
 	 * timestamp.
 	 *
@@ -413,6 +415,9 @@ public class CheckpointCoordinator {
 				return new CheckpointTriggerResult(CheckpointDeclineReason.PERIODIC_SCHEDULER_SHUTDOWN);
 			}
 
+			/**
+			 * 验证是否可以针对检查点的并发限制以及检查点之间的最短时间触发检查点。这些检查与保存点无关
+			 */
 			// validate whether the checkpoint can be triggered, with respect to the limit of
 			// concurrent checkpoints, and the minimum time between checkpoints.
 			// these checks are not relevant for savepoints
@@ -452,6 +457,9 @@ public class CheckpointCoordinator {
 			}
 		}
 
+		/**
+		 * 检查我们需要触发的所有任务是否正在运行。如果没有，则中止检查点
+		 */
 		// check if all tasks that we need to trigger are running.
 		// if not, abort the checkpoint
 		Execution[] executions = new Execution[tasksToTrigger.length];
@@ -474,6 +482,9 @@ public class CheckpointCoordinator {
 			}
 		}
 
+		/**
+		 * 接下来，检查是否所有需要确认检查点的任务都在运行。
+		 */
 		// next, check if all tasks that need to acknowledge the checkpoint are running.
 		// if not, abort the checkpoint
 		Map<ExecutionAttemptID, ExecutionVertex> ackTasks = new HashMap<>(tasksToWaitFor.length);
@@ -490,8 +501,13 @@ public class CheckpointCoordinator {
 			}
 		}
 
+		// 我们真正开始触发checkpoint
 		// we will actually trigger this checkpoint!
 
+		/**
+		 * 我们使用特殊锁定锁定以确保触发请求不会相互超越。这不是通过协调器范围的锁来完成的，
+		 * 因为'checkpointIdCounter'可能会发出阻塞操作。使用与协调器范围锁不同的锁，我们避免在此期间阻止“确认/拒绝”消息的处理。
+		 */
 		// we lock with a special lock to make sure that trigger requests do not overtake each other.
 		// this is not done with the coordinator-wide lock, because the 'checkpointIdCounter'
 		// may issue blocking operations. Using a different lock than the coordinator-wide lock,
@@ -506,6 +522,7 @@ public class CheckpointCoordinator {
 				// with external services (in HA mode) and may block for a while.
 				checkpointID = checkpointIdCounter.getAndIncrement();
 
+				// 判断是执行Checkpoint还是Savepoint
 				checkpointStorageLocation = props.isSavepoint() ?
 						checkpointStorage.initializeLocationForSavepoint(checkpointID, externalSavepointLocation) :
 						checkpointStorage.initializeLocationForCheckpoint(checkpointID);
@@ -519,6 +536,11 @@ public class CheckpointCoordinator {
 				return new CheckpointTriggerResult(CheckpointDeclineReason.EXCEPTION);
 			}
 
+
+			/**
+			 * 构造出一个PendingCheckpoint实例，然后再赛到队列里，只有当jobmanager收到sinktask发来的checkpoint保存成功的消息，
+			 * 这个PendingCheckpoint才会变成CompletedCheckpoint，这才代表一次checkpoint保存操作真正的完成了。
+			 */
 			final PendingCheckpoint checkpoint = new PendingCheckpoint(
 				job,
 				checkpointID,
@@ -529,6 +551,7 @@ public class CheckpointCoordinator {
 				executor);
 
 			if (statsTracker != null) {
+				// Creates a new pending checkpoint tracker.
 				PendingCheckpointStats callback = statsTracker.reportPendingCheckpoint(
 					checkpointID,
 					timestamp,
@@ -622,6 +645,11 @@ public class CheckpointCoordinator {
 						props.getCheckpointType(),
 						checkpointStorageLocation.getLocationReference());
 
+				/**
+				 * 这里才是最最最关键的，就是向sourcetask发送保存checkpoint的消息，通知taskmanager进行本地的checkpoint保存。
+				 * 为什么说是向sourcetask发送消息呢？那肯定是executions里保存的都是sourcetask啊。
+				 * 那为啥executions里都是sourcetask呢？这个就稍微复杂些了。
+				 */
 				// send the messages to the tasks that trigger their checkpoint
 				for (Execution execution: executions) {
 					execution.triggerCheckpoint(checkpointID, timestamp, checkpointOptions);
@@ -1171,6 +1199,9 @@ public class CheckpointCoordinator {
 	//  Periodic scheduling of checkpoints
 	// --------------------------------------------------------------------------------------------
 
+	/**
+	 * checkpoint执行线程会被周期性的调度，执行周期是由用户自行配置的。
+	 */
 	public void startCheckpointScheduler() {
 		synchronized (lock) {
 			if (shutdown) {

@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.flink.util.StringUtils;
 
 /**
+ * flink 又进一步将一个文件的 IO 抽象成了 FileIOChannel，通过 FileIOChannel 封装了底层的文件读写
+ *
  * A Channel represents a collection of files that belong logically to the same resource. An example is a collection of
  * files that contain sorted runs of data from the same stream, that will later on be merged together.
  */

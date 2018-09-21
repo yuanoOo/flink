@@ -29,6 +29,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * rpc服务的接口。rpc服务用于启动并连接到{@link RpcEndpoint}。连接到rpc服务器将返回{@link RpcGateway}，可用于调用远程调用。
+ *
  * Interface for rpc services. An rpc service is used to start and connect to a {@link RpcEndpoint}.
  * Connecting to a rpc server will return a {@link RpcGateway} which can be used to call remote
  * procedures.

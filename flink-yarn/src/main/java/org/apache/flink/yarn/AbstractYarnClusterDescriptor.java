@@ -456,6 +456,9 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	}
 
 	/**
+	 * flink通过YarnClusterDescriptor来描述yarn集群的部署配置，具体对应的配置文件为flink-conf.yaml，
+	 * 通过下面这段逻辑触发集群部署：
+	 *
 	 * This method will block until the ApplicationMaster/JobManager have been deployed on YARN.
 	 *
 	 * @param clusterSpecification Initial cluster specification for the Flink cluster to be deployed

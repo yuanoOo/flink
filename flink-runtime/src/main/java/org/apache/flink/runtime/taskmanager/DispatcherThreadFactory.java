@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import java.util.concurrent.ThreadFactory;
 
 /**
+ * 创建具有给定名称的线程的线程工厂，将它们与给定的线程组相关联，并将它们设置为守护程序模式。
+ *
  * Thread factory that creates threads with a given name, associates them with a given
  * thread group, and set them to daemon mode.
  */

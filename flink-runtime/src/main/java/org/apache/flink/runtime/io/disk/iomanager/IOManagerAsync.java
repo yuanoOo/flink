@@ -33,6 +33,10 @@ import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * A version of the {@link IOManager} that uses asynchronous I/O.
+ *
+ * flink 通过 IOManager 来控制磁盘 IO 的过程，提供同步和异步两种写模式【其实只有异步】，
+ * 具体的读写方式又分为 block、buffer、bulk 三种方式；用户可以指定 IO 的文件目录集合，
+ * IOManager 会以 round-robin 的方式写不同目录的不同文件。
  */
 public class IOManagerAsync extends IOManager implements UncaughtExceptionHandler {
 	

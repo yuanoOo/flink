@@ -462,6 +462,19 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		return false;
 	}
 
+	/**
+	 * 如果开启Checkpointing，则会开启checkpoint coordinator
+	 * 1、校验checkpoint周期、timeout、等
+	 * 2、create the coordinator that triggers and commits checkpoints and holds the state
+	 * 	  创建checkpoint协调者 ====》触发、提交、持有状态
+	 * 3、register the master hooks on the checkpoint coordinator： 在检查点协调器上注册hooks
+	 *   The interface for hooks that can be called by the checkpoint coordinator when triggering or
+	 *   restoring a checkpoint.
+	 *   当触发或恢复检查点时，检查点协调器会调用这些钩子函数。
+	 * 4、设置checkpoint stats跟踪者
+	 * 5、注册Job状态监听器：registerJobStatusListener(checkpointCoordinator.createActivatorDeactivator());
+	 *    定期checkpoint调度程序，只会在job running激活，其余状态则不会调度
+	 */
 	public void enableCheckpointing(
 			long interval,
 			long checkpointTimeout,

@@ -883,6 +883,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	/**
+	 * 触发此执行任务的新检查点。
 	 * Trigger a new checkpoint on the task of this execution.
 	 *
 	 * @param checkpointId of th checkpoint to trigger

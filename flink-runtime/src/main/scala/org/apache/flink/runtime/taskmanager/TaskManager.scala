@@ -79,6 +79,10 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 /**
+  *
+  * TaskManager 在 Flink 中也被叫做一个 Instance，统一管理该物理节点上的所有 Flink job 的 tasks 运行，
+  * 它的功能包括了 task 的启动销毁、内存管理、磁盘IO、网络传输管理等
+  *
  * The TaskManager is responsible for executing the individual tasks of a Flink job. It is
  * implemented as an actor. The TaskManager has the following phases:
  *

@@ -68,6 +68,10 @@ import java.util.Set;
  * On-demand allocation means that the memory manager only keeps track how many memory segments are
  * currently allocated (bookkeeping only). Releasing a memory segment will not add it back to the pool,
  * but make it re-claimable by the garbage collector.
+ * MemoryManager 管理内存也分两种模式：预分配和按需分配。预分配模式下，内存在启动时就会分好，这就会意味着不会发生 OOM 异常，
+ * 释放的内存会重新归还 MemoryManager 的内存池；按需模式下，MemoryManager 仅仅追踪内存的使用【做记录】，
+ * 释放内存不会归还 MemoryManager 的内存池，而是通过托管给 JVM 的垃圾回收来最终释放，这样便可能会发生 OOM
+ *
  */
 public class MemoryManager {
 

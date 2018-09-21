@@ -77,6 +77,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
+ * 基于Akka的{@link RpcService}实现。RPC服务启动一个Akka actor以从{@link RpcGateway}接收RPC调用。
+ *
  * Akka based {@link RpcService} implementation. The RPC service starts an Akka actor to receive
  * RPC invocations from a {@link RpcGateway}.
  */
