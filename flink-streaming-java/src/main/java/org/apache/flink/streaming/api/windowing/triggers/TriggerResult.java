@@ -44,7 +44,7 @@ public enum TriggerResult {
 	 * On {@code FIRE}, the window is evaluated and results are emitted.
 	 * The window is not purged, though, all elements are retained.
 	 */
-	FIRE(true, false),
+	 FIRE(true, false),
 
 	/**
 	 * All elements in the window are cleared and the window is discarded,

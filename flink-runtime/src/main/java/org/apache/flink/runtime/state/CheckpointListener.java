@@ -21,6 +21,8 @@ package org.apache.flink.runtime.state;
 import org.apache.flink.annotation.PublicEvolving;
 
 /**
+ * 此接口必须由希望在所有参与者完全确认检查点后接收提交通知的函数/操作来实现。
+ *
  * This interface must be implemented by functions/operations that want to receive
  * a commit notification once a checkpoint has been completely acknowledged by all
  * participants.

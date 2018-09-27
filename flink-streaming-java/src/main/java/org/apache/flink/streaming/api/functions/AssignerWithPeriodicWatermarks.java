@@ -24,10 +24,17 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import javax.annotation.Nullable;
 
 /**
+ * {@code AssignerWithPeriodicWatermarks}为元素分配事件时间时间戳，并生成低水印，用于指示流中的事件时间进度。
+ * 这些时间戳和水印由在事件时间操作的功能和操作员使用，例如事件时间窗口。
+ *
  * The {@code AssignerWithPeriodicWatermarks} assigns event time timestamps to elements,
  * and generates low watermarks that signal event time progress within the stream.
  * These timestamps and watermarks are used by functions and operators that operate
  * on event time, for example event time windows.
+ *
+ * 使用此类可以定期生成水印。最多每{@code i}毫秒（通过{@link ExecutionConfig＃getAutoWatermarkInterval（）}配置），
+ * 系统将调用{@link #getCurrentWatermark（）}方法来探测下一个水印值。如果探测值非空并且时间戳大于先前水印的时间戳
+ * （以保持上升水印的合约），则系统将生成新水印。
  *
  * <p>Use this class to generate watermarks in a periodical interval.
  * At most every {@code i} milliseconds (configured via
@@ -37,9 +44,13 @@ import javax.annotation.Nullable;
  * and has a timestamp larger than that of the previous watermark (to preserve
  * the contract of ascending watermarks).
  *
+ * 如果自上次调用该方法后没有新元素到达，则系统可以比每{@code i}毫秒更少地调用{@link #getCurrentWatermark（）}方法。
  * <p>The system may call the {@link #getCurrentWatermark()} method less often than every
  * {@code i} milliseconds, if no new elements arrived since the last call to the
  * method.
+ *
+ * 时间戳和水印定义为{@code longs}，表示自Epoch（1970年1月1日午夜）以来的毫秒数。
+ * 具有特定值{@code t}的水印表示不再出现具有事件时间戳{@code x}的元素，其中{@code x}低于或等于{@code t}。
  *
  * <p>Timestamps and watermarks are defined as {@code longs} that represent the
  * milliseconds since the Epoch (midnight, January 1, 1970 UTC).
