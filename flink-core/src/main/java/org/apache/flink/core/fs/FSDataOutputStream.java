@@ -24,20 +24,27 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
+ * 通过{@link FileSystem}创建的文件的输出流。
  * An output stream to a file that is created via a {@link FileSystem}.
  * This class extends the base {@link java.io.OutputStream} with some additional important methods.
  *
+ * 数据持久性保证
  * <h2>Data Persistence Guarantees</h2>
  *
+ * 这些流用于持久存储数据，既用于流应用程序的结果，也用于容错和恢复。因此，必须明确定义这些流的持久性语义。
  * <p>These streams are used to persistently store data, both for results of streaming applications
  * and for fault tolerance and recovery. It is therefore crucial that the persistence semantics
  * of these streams are well defined.
  *
+ * 请参阅{@link FileSystem}的类级文档，了解通过Flink的FileSystem抽象和{@code FSDataOutputStream}定义数据持久性。
  * <p>Please refer to the class-level docs of {@link FileSystem} for the definition of data persistence
  * via Flink's FileSystem abstraction and the {@code FSDataOutputStream}.
  *
+ * 线程安全
  * <h2>Thread Safety</h2>
  *
+ * 通常不认为{@code FSDataOutputStream}的实现是线程安全的。
+ * 不应在线程之间传递{@code FSDataOutputStream}的实例，因为无法保证跨线程的操作可见性顺序。
  * <p>Implementations of the {@code FSDataOutputStream} are generally not assumed to be thread safe.
  * Instances of {@code FSDataOutputStream} should not be passed between threads, because there
  * are no guarantees about the order of visibility of operations across threads.

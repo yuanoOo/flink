@@ -27,6 +27,7 @@ import java.io.OutputStream;
 
 /**
  * A factory for checkpoint output streams, which are used to persist data for checkpoints.
+ * 检查点输出流的工厂，用于保存检查点的数据。===》封装了具体的存储交互，也就是内存/文件系统读写
  *
  * <p>Stream factories can be created from the {@link CheckpointStorage} through
  * {@link CheckpointStorage#resolveCheckpointStorageLocation(long, CheckpointStorageLocationReference)}.

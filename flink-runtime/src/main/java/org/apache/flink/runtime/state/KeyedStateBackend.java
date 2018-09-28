@@ -27,6 +27,7 @@ import org.apache.flink.util.Disposable;
 import java.util.stream.Stream;
 
 /**
+ * 封装了快照的读写细节，快照分区策略等
  * A keyed state backend provides methods for managing keyed state.
  *
  * @param <K> The key by which state is keyed.

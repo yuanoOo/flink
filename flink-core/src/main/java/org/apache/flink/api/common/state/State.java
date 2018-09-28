@@ -21,6 +21,7 @@ package org.apache.flink.api.common.state;
 import org.apache.flink.annotation.PublicEvolving;
 
 /**
+ * 封装了与 KeyedStateBackend 交互时状态的 val 序列化/反序列化 等逻辑
  * Interface that different types of partitioned state must implement.
  *
  * <p>The state is only accessible by functions applied on a {@code KeyedStream}. The key is
