@@ -55,6 +55,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
+ * Flink Async IO的核心类 ---> Async Operator
+ *
  * The {@link AsyncWaitOperator} allows to asynchronously process incoming stream records. For that
  * the operator creates an {@link ResultFuture} which is passed to an {@link AsyncFunction}.
  * Within the async function, the user can complete the async collector arbitrarily. Once the async
@@ -132,14 +135,28 @@ public class AsyncWaitOperator<IN, OUT>
 	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
 		super.setup(containingTask, config, output);
 
+		/**
+		 * 获取执行 task 的 checkpointLock，此 lock 用来互斥 AsyncWaitOperator 内部队列的 checkpoint 和 队列元素的添加，
+		 * 没有这个 lock，就无法保证快照的准确性【保证快照时，队列里的元素都被写入 checkpoint】
+		 */
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 
+		/**
+		 * 获取输入元素的序列化器
+		 */
 		this.inStreamElementSerializer = new StreamElementSerializer<>(
 			getOperatorConfig().<IN>getTypeSerializerIn1(getUserCodeClassloader()));
 
+		/**
+		 * 初始化单线程线程池，此线程池被用于 AsyncWaitOperator 内部队列
+		 */
 		// create the operators executor for the complete operations of the queue entries
 		this.executor = Executors.newSingleThreadExecutor();
 
+		/**
+		 * 初始化内部队列的类型：OrderedStreamElementQueue 和 UnorderedStreamElementQueue
+		 * 分别对应有序和无序两种下游输出模式，下面会有详细介绍
+		 */
 		switch (outputMode) {
 			case ORDERED:
 				queue = new OrderedStreamElementQueue(
@@ -162,6 +179,10 @@ public class AsyncWaitOperator<IN, OUT>
 	public void open() throws Exception {
 		super.open();
 
+		/**
+		 * 创建Emitter Runnable
+		 * Runnable负责消耗给定队列中的元素并将它们输出到给定的output / timestampedCollector。
+		 */
 		// create the emitter
 		this.emitter = new Emitter<>(checkpointingLock, output, queue, this);
 
@@ -170,6 +191,9 @@ public class AsyncWaitOperator<IN, OUT>
 		emitterThread.setDaemon(true);
 		emitterThread.start();
 
+		/**
+		 * 如果之前有快照队列元素，重新重快照恢复，并处理这些元素
+		 */
 		// process stream elements from state, since the Emit thread will start as soon as all
 		// elements from previous state are in the StreamElementQueue, we have to make sure that the
 		// order to open all operators in the operator chain proceeds from the tail operator to the

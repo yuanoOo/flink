@@ -27,6 +27,9 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 /**
+ * StreamRecordQueueEntry 中维护了一个 FlinkCompletableFuture 实例，
+ * 可以用来异步保存用户定义的 AsyncFunction 的回调结果
+ *
  * {@link StreamElementQueueEntry} implementation for {@link StreamRecord}. This class also acts
  * as the {@link ResultFuture} implementation which is given to the {@link AsyncFunction}. The
  * async function completes this class with a collection of results.
